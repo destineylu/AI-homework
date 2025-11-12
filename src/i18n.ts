@@ -21,7 +21,8 @@ i18n
   // For all options read: https://www.i18next.com/overview/configuration-options
   .init({
     // Set a fallback language for cases where a translation is missing in the current language.
-    fallbackLng: "en",
+    fallbackLng: "zh",
+    lng: "zh", // 强制使用中文
 
     // Define the namespaces you will use.
     // These correspond to your JSON file names (e.g., actions.json, upload-info.json).

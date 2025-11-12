@@ -3,10 +3,10 @@
     "clear-all": "清空所有文件",
     "clear-confirmation": "再点击一次",
     "processing": "处理中...",
-    "scan": "开始打滑",
+    "scan": "开始解题",
     "chat": "聊天",
     "settings": "设置",
-    "title": "上传照片",
+    "title": "添加图片",
     "global-traits": {
       "trigger": "全局提示词编辑器",
       "title": "编辑全局提示词",
@@ -29,9 +29,9 @@
     "drop-cancel": "拖到这里取消"
   },
   "scan-page": {
-    "donate-btn": "现在赞助",
+    "donate-btn": "赞助支持",
     "title": "扫描你的作业",
-    "tip": "我们不会在未经授权时上传您的文件",
+    "tip": "在您操作前，我们绝不会上传任何内容。",
     "mobile": {
       "status": "已有 {{count}} 个文件",
       "status_plural": "已有 {{count}} 个文件",
