@@ -3,16 +3,18 @@
  * Identifies problem types and generates type-specific solving strategies
  */
 
-export enum ProblemType {
-  MULTIPLE_CHOICE = "multiple_choice",
-  FILL_IN_BLANK = "fill_in_blank",
-  CALCULATION = "calculation",
-  PROOF = "proof",
-  APPLICATION = "application",
-  ESSAY = "essay",
-  TRUE_FALSE = "true_false",
-  UNKNOWN = "unknown",
-}
+export const ProblemType = {
+  MULTIPLE_CHOICE: "multiple_choice",
+  FILL_IN_BLANK: "fill_in_blank",
+  CALCULATION: "calculation",
+  PROOF: "proof",
+  APPLICATION: "application",
+  ESSAY: "essay",
+  TRUE_FALSE: "true_false",
+  UNKNOWN: "unknown",
+} as const;
+
+export type ProblemType = typeof ProblemType[keyof typeof ProblemType];
 
 export interface ClassificationResult {
   type: ProblemType;
