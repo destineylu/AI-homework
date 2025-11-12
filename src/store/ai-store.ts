@@ -20,6 +20,9 @@ export interface AiSource {
   model: string;
   traits?: string;
   thinkingBudget?: number;
+  temperature?: number;
+  topP?: number;
+  maxOutputTokens?: number;
   enabled: boolean;
   pollIntervalMs?: number;
   maxPollMs?: number;
@@ -89,6 +92,9 @@ function createDefaultSources(): AiSource[] {
       model: legacy?.model ?? DEFAULT_GEMINI_MODEL,
       traits: legacy?.traits,
       thinkingBudget: legacy?.thinkingBudget ?? 8192,
+      temperature: 0.3,
+      topP: 0.9,
+      maxOutputTokens: 8192,
       enabled: true,
       pollIntervalMs: undefined,
       maxPollMs: undefined,
@@ -102,6 +108,9 @@ function createDefaultSources(): AiSource[] {
       model: DEFAULT_OPENAI_MODEL,
       traits: undefined,
       thinkingBudget: undefined,
+      temperature: 0.3,
+      topP: 0.9,
+      maxOutputTokens: 8192,
       enabled: false,
       pollIntervalMs: 1_000,
       maxPollMs: 30_000,
@@ -115,6 +124,9 @@ function createClientForSource(source: AiSource): AiClient | null {
   if (source.provider === "gemini") {
     return new GeminiAi(source.apiKey, source.baseUrl, {
       thinkingBudget: source.thinkingBudget,
+      temperature: source.temperature,
+      topP: source.topP,
+      maxOutputTokens: source.maxOutputTokens,
     });
   }
 

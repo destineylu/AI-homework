@@ -7,6 +7,7 @@ import PreviewCard from "../cards/PreviewCard";
 import { SOLVE_SYSTEM_PROMPT } from "@/ai/prompts";
 import { uint8ToBase64 } from "@/utils/encoding";
 import { parseSolveResponse } from "@/ai/response";
+import { AnswerValidator } from "@/utils/answer-validator";
 
 import {
   useProblemsStore,
@@ -184,33 +185,64 @@ export default function ScanPage() {
     clearAllSolutions(); // Use the semantic action to clear solutions.
   };
 
-  // Utility function to retry an async operation with exponential backoff.
+  // Utility function to retry an async operation with exponential backoff and quality checks.
   const retryAsyncOperation = async (
     asyncFn: () => Promise<string>,
-    maxRetries: number = 5,
-    initialDelayMs: number = 5000,
+    maxRetries: number = 3,
+    initialDelayMs: number = 3000,
   ): Promise<string> => {
     let lastError: Error | undefined;
     let delay = initialDelayMs;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        return await asyncFn(); // Attempt the operation.
+        const result = await asyncFn(); // Attempt the operation.
+        
+        // ===== Quality checks on the result =====
+        // 1. Check if result is empty or too short
+        if (!result || result.trim().length < 50) {
+          throw new Error("AI返回内容过短或为空");
+        }
+        
+        // 2. Check if result contains valid structure (XML or JSON)
+        const hasValidStructure = 
+          result.includes("<solution>") || 
+          result.includes("<problems>") ||
+          (result.includes("{") && result.includes("problems"));
+        
+        if (!hasValidStructure) {
+          throw new Error("AI返回格式不正确，缺少有效的数据结构");
+        }
+        
+        // 3. Check for common error indicators
+        const hasErrorIndicators = 
+          result.includes("error") || 
+          result.includes("failed") ||
+          result.includes("cannot");
+        
+        if (hasErrorIndicators && result.length < 200) {
+          throw new Error("AI返回可能包含错误信息");
+        }
+        // ===== Quality checks end =====
+        
+        return result;
       } catch (error) {
         lastError = error as Error;
         console.log(
-          `Attempt ${attempt} failed. Retrying in ${delay / 1000}s...`,
+          `Attempt ${attempt}/${maxRetries} failed: ${lastError.message}. ${
+            attempt < maxRetries ? `Retrying in ${delay / 1000}s...` : "No more retries."
+          }`,
         );
 
         if (attempt < maxRetries) {
           // Wait for the delay period before the next attempt.
           await new Promise((resolve) => setTimeout(resolve, delay));
-          delay *= 2; // Double the delay for the next retry (exponential backoff).
+          delay *= 1.5; // Use gentler exponential backoff (1.5x instead of 2x)
         }
       }
     }
     // If all retries fail, throw the last captured error.
-    throw lastError ?? new Error("Unknown AI failure");
+    throw lastError ?? new Error("Unknown AI failure after all retries");
   };
 
   /**
@@ -339,9 +371,46 @@ ${traits}
               throw new Error(t("errors.parsing-failed"));
             }
 
+            // ===== 验证答案质量 =====
+            const validatedProblems = res.problems.map((problem) => {
+              const validation = AnswerValidator.validateSolution(problem);
+              
+              // 如果置信度过低，在explanation中添加警告
+              if (validation.confidence < 0.7) {
+                const badge = AnswerValidator.getConfidenceBadge(validation.confidence);
+                let warningText = `⚠️ **答案质量警告** (置信度: ${(validation.confidence * 100).toFixed(0)}% - ${badge.label})\n\n`;
+                
+                if (validation.issues.length > 0) {
+                  warningText += `**发现的问题：**\n`;
+                  validation.issues.forEach(issue => {
+                    warningText += `- ${issue}\n`;
+                  });
+                  warningText += "\n";
+                }
+                
+                if (validation.suggestions.length > 0) {
+                  warningText += `**改进建议：**\n`;
+                  validation.suggestions.forEach(suggestion => {
+                    warningText += `- ${suggestion}\n`;
+                  });
+                  warningText += "\n";
+                }
+                
+                warningText += "---\n\n";
+                
+                return {
+                  ...problem,
+                  explanation: warningText + problem.explanation,
+                };
+              }
+              
+              return problem;
+            });
+            // ===== 验证结束 =====
+
             updateSolution(item.url, {
               status: "success",
-              problems: res.problems ?? [],
+              problems: validatedProblems,
               aiSourceId: source.id,
             });
 

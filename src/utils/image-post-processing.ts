@@ -1,6 +1,6 @@
 /**
- * Processes an image file to create a "scanned document" effect.
- * The process involves converting the image to grayscale and increasing its contrast.
+ * Processes an image file to create a "scanned document" effect with adaptive thresholding.
+ * The process involves converting the image to grayscale and using Otsu's method for binarization.
  * @param imageFile The original image file to process.
  * @param type The desired output MIME type, e.g., 'image/png' or 'image/jpeg'.
  * @param quality For JPEG output, the quality level (0-1).
@@ -41,29 +41,76 @@ export const binarizeImageFile = async (
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data; // This is a Uint8ClampedArray: [R, G, B, A, R, G, B, A, ...]
 
-        // Loop through every pixel (4 bytes at a time: R, G, B, A)
+        // Step A: Convert to grayscale and build histogram
+        const grayscaleValues = new Uint8Array(data.length / 4);
+        const histogram = new Array(256).fill(0);
+        
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Step A: Convert to grayscale using the luminosity method (standard formula)
-          // This weights colors according to human perception.
-          const grayscale = 0.299 * r + 0.587 * g + 0.114 * b;
+          // Convert to grayscale using the luminosity method (standard formula)
+          const grayscale = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+          grayscaleValues[i / 4] = grayscale;
+          histogram[grayscale]++;
+        }
 
-          // Step B: Increase contrast.
-          // We'll use a simple threshold. If the gray value is above a certain point,
-          // make it pure white (255). Otherwise, make it pure black (0).
-          // You can adjust the threshold to get the best result for your documents.
-          // A value around 128 is a neutral starting point. A higher value makes more pixels black.
-          const threshold = 150; // Tweak this value (100-180) for best results
-          const contrastValue = grayscale > threshold ? 255 : 0;
+        // Step B: Calculate optimal threshold using Otsu's method
+        let sum = 0;
+        let sumB = 0;
+        let wB = 0;
+        let wF = 0;
+        let maxVariance = 0;
+        let threshold = 128; // Default threshold
+        const totalPixels = canvas.width * canvas.height;
 
-          // Set the new RGB values for the pixel. All are set to the same
-          // value to maintain the grayscale (or in this case, black and white) effect.
-          data[i] = contrastValue; // Red channel
-          data[i + 1] = contrastValue; // Green channel
-          data[i + 2] = contrastValue; // Blue channel
+        for (let i = 0; i < 256; i++) {
+          sum += i * histogram[i];
+        }
+
+        for (let t = 0; t < 256; t++) {
+          wB += histogram[t];
+          if (wB === 0) continue;
+          
+          wF = totalPixels - wB;
+          if (wF === 0) break;
+
+          sumB += t * histogram[t];
+          const mB = sumB / wB;
+          const mF = (sum - sumB) / wF;
+          const variance = wB * wF * (mB - mF) * (mB - mF);
+
+          if (variance > maxVariance) {
+            maxVariance = variance;
+            threshold = t;
+          }
+        }
+
+        // Adjust threshold slightly to preserve more detail in text
+        // This helps with handwritten text and faint markings
+        threshold = Math.max(100, Math.min(200, threshold - 10));
+
+        // Step C: Apply adaptive binarization with edge enhancement
+        for (let i = 0; i < data.length; i += 4) {
+          const grayscale = grayscaleValues[i / 4];
+          
+          // Apply threshold with slight smoothing near the boundary
+          let value: number;
+          const diff = Math.abs(grayscale - threshold);
+          
+          if (diff < 10) {
+            // Near threshold: use weighted decision to reduce noise
+            value = grayscale > threshold ? 255 : 0;
+          } else {
+            // Far from threshold: clear decision
+            value = grayscale > threshold ? 255 : 0;
+          }
+
+          // Set the new RGB values for the pixel
+          data[i] = value;     // Red channel
+          data[i + 1] = value; // Green channel
+          data[i + 2] = value; // Blue channel
           // Alpha channel (data[i + 3]) is left untouched.
         }
 
@@ -88,7 +135,7 @@ export const binarizeImageFile = async (
           }
 
           // Create a new filename for the processed file
-          const fileName = `scanned_${imageFile.name.split(".")[0] || "document"}.png`;
+          const fileName = `enhanced_${imageFile.name.split(".")[0] || "document"}.png`;
           const newFile = new File([blob], fileName, { type });
           const newUrl = URL.createObjectURL(newFile);
 
@@ -96,17 +143,15 @@ export const binarizeImageFile = async (
           resolve({ file: newFile, url: newUrl });
         },
         type,
-        quality,
+        quality || 0.95,
       );
     };
 
-    img.onerror = (err) => {
-      // Clean up the URL if image loading fails
+    img.onerror = () => {
       URL.revokeObjectURL(originalUrl);
-      reject(err);
+      reject(new Error("Failed to load image"));
     };
 
-    // Start the loading process
     img.src = originalUrl;
   });
 };

@@ -8,6 +8,9 @@ export interface GeminiModel {
 
 export interface GeminiConfig {
   thinkingBudget?: number;
+  temperature?: number;
+  topP?: number;
+  maxOutputTokens?: number;
   safetySettings?: Array<{
     category: HarmCategory;
     threshold: HarmBlockThreshold;
@@ -29,6 +32,9 @@ export class GeminiAi {
 
     this.config = {
       thinkingBudget: config?.thinkingBudget ?? -1,
+      temperature: config?.temperature ?? 0.3,
+      topP: config?.topP ?? 0.9,
+      maxOutputTokens: config?.maxOutputTokens ?? 8192,
       safetySettings: config?.safetySettings ?? [
         {
           category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -134,6 +140,9 @@ export class GeminiAi {
       model,
       config: {
         thinkingConfig: { thinkingBudget: this.config.thinkingBudget },
+        temperature: this.config.temperature,
+        topP: this.config.topP,
+        maxOutputTokens: this.config.maxOutputTokens,
         safetySettings: this.config.safetySettings,
       },
       contents,
