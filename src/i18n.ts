@@ -1,5 +1,5 @@
 import i18n from "i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
+// import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import HttpApi from "i18next-http-backend";
 
@@ -11,11 +11,12 @@ i18n
   // Pass the i18n instance to react-i18next.
   // This makes the i18n instance available to all your components.
   .use(initReactI18next)
-  .use(
-    new LanguageDetector(undefined, {
-      order: ["navigator"],
-    }),
-  )
+  // 注释掉语言检测器，强制使用中文
+  // .use(
+  //   new LanguageDetector(undefined, {
+  //     order: ["navigator"],
+  //   }),
+  // )
 
   // Initialize i18next.
   // For all options read: https://www.i18next.com/overview/configuration-options
