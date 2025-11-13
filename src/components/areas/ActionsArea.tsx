@@ -72,7 +72,7 @@ export default function ActionsArea({
     >
       <GlobalTraitsEditor
         className={cn(
-          "flex-1 items-center justify-center",
+          "flex-1 items-center justify-center font-medium",
           isMobileLayout && "py-6 text-base",
         )}
       />
@@ -81,7 +81,7 @@ export default function ActionsArea({
         ref={clearAllBtnRef}
         variant="destructive"
         className={cn(
-          "flex-1 items-center justify-center",
+          "flex-1 items-center justify-center font-semibold shadow-md hover:shadow-lg transition-all",
           isMobileLayout && "py-6 text-base",
         )}
         size={isMobileLayout ? "lg" : "default"}
@@ -97,8 +97,10 @@ export default function ActionsArea({
       <Button
         ref={skidBtnRef}
         className={cn(
-          "flex-1 items-center justify-center gap-2",
-          isMobileLayout && "py-6 text-base",
+          "flex-1 items-center justify-center gap-2 font-bold shadow-lg hover:shadow-xl transition-all",
+          "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
+          "text-white border-0",
+          isMobileLayout && "py-7 text-lg",
         )}
         size={isMobileLayout ? "lg" : "default"}
         disabled={itemsLength === 0 || isWorking}

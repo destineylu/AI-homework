@@ -83,8 +83,10 @@ export default function UploadArea({ appendFiles, allowPdf }: UploadAreaProps) {
         />
         <Button
           className={cn(
-            "flex-1 items-center justify-between",
-            isCompact && "py-6 text-base font-medium",
+            "flex-1 items-center justify-between font-semibold shadow-md hover:shadow-lg transition-all",
+            "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800",
+            "text-white border-0",
+            isCompact && "py-7 text-lg",
           )}
           size={isCompact ? "lg" : "default"}
           ref={uploadBtnRef}
@@ -116,8 +118,10 @@ export default function UploadArea({ appendFiles, allowPdf }: UploadAreaProps) {
           ref={cameraBtnRef}
           variant="secondary"
           className={cn(
-            "flex-1 items-center justify-between",
-            isCompact && "py-6 text-base font-medium",
+            "flex-1 items-center justify-between font-semibold shadow-sm hover:shadow-md transition-all",
+            "bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300",
+            "dark:from-gray-700 dark:to-gray-800 dark:hover:from-gray-600 dark:hover:to-gray-700",
+            isCompact && "py-7 text-lg",
           )}
           size={isCompact ? "lg" : "default"}
           disabled={isWorking}

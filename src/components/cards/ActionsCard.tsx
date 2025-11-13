@@ -98,7 +98,10 @@ export default function ActionsCard({
           )}
         >
           <Button
-            className={cn("flex-1", layout === "mobile" && "py-6 text-base")}
+            className={cn(
+              "flex-1 font-medium shadow-sm hover:shadow-md transition-all",
+              layout === "mobile" && "py-6 text-base"
+            )}
             size={layout === "mobile" ? "lg" : "default"}
             variant="secondary"
             onClick={handleSettingsBtnClick}
@@ -109,7 +112,10 @@ export default function ActionsCard({
             )}
           </Button>
           <Button
-            className={cn("flex-1", layout === "mobile" && "py-6 text-base")}
+            className={cn(
+              "flex-1 font-medium shadow-sm hover:shadow-md transition-all",
+              layout === "mobile" && "py-6 text-base"
+            )}
             size={layout === "mobile" ? "lg" : "default"}
             variant="secondary"
             onClick={handleChatBtnClick}
