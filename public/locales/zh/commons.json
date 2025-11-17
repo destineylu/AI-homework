@@ -7,6 +7,8 @@
     "chat": "聊天",
     "settings": "设置",
     "title": "添加图片",
+    "batch-requirement-label": "本次解题要求（可选）",
+    "batch-requirement-placeholder": "在此输入本次解题的临时要求，例如：请用中文回答所有问题、详细解释解题步骤等。此要求仅对本次上传的题目生效。",
     "global-traits": {
       "trigger": "全局提示词编辑器",
       "title": "编辑全局提示词",

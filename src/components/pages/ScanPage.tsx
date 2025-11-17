@@ -249,7 +249,7 @@ export default function ScanPage() {
    * Main function to start the scanning process.
    * It polls through the configured AI sources until one succeeds per item.
    */
-  const startScan = async () => {
+  const startScan = async (batchRequirement?: string) => {
     const availableSources = enabledSources;
 
     if (!availableSources.length) {
@@ -350,8 +350,16 @@ ${traits}
 `
               : "";
 
+            const batchPrompt = batchRequirement
+              ? `\nCurrent batch requirements:
+<batch-requirements>
+${batchRequirement}
+</batch-requirements>
+`
+              : "";
+
             ai.setSystemPrompt(
-              SOLVE_SYSTEM_PROMPT + promptPrompt + traitsPrompt,
+              SOLVE_SYSTEM_PROMPT + promptPrompt + traitsPrompt + batchPrompt,
             );
 
             clearStreamedOutput(item.url);

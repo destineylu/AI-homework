@@ -7,9 +7,11 @@ import { cn } from "@/lib/utils";
 import { useShortcut } from "@/hooks/use-shortcut";
 import { ShortcutHint } from "../ShortcutHint";
 import GlobalTraitsEditor from "../GlobalTraitsEditor";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
 
 export type ActionsAreaProps = {
-  startScan: () => Promise<void>;
+  startScan: (batchRequirement?: string) => Promise<void>;
   clearAll: () => void;
   itemsLength: number;
   layout?: "default" | "mobile";
@@ -23,12 +25,13 @@ export default function ActionsArea({
 }: ActionsAreaProps) {
   const { t } = useTranslation("commons", { keyPrefix: "actions" });
   const isMobileLayout = layout === "mobile";
+  const [batchRequirement, setBatchRequirement] = useState("");
 
   const isWorking = useProblemsStore((s) => s.isWorking);
   const handleSkidBtnClicked = useCallback(() => {
     if (isWorking) return;
-    startScan();
-  }, [isWorking, startScan]);
+    startScan(batchRequirement.trim() || undefined);
+  }, [isWorking, startScan, batchRequirement]);
 
   const clearAllBtnRef = useRef<HTMLButtonElement | null>(null);
   const skidBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -67,17 +70,34 @@ export default function ActionsArea({
   );
 
   return (
-    <div
-      className={cn("flex gap-2 flex-wrap", isMobileLayout && "flex-col gap-3")}
-    >
-      <GlobalTraitsEditor
-        className={cn(
-          "flex-1 items-center justify-center font-medium",
-          isMobileLayout && "py-6 text-base",
-        )}
-      />
+    <div className={cn("space-y-3", isMobileLayout && "space-y-4")}>
+      <div className="space-y-2">
+        <Label htmlFor="batch-requirement" className="text-sm font-medium">
+          {t("batch-requirement-label")}
+        </Label>
+        <Textarea
+          id="batch-requirement"
+          placeholder={t("batch-requirement-placeholder")}
+          value={batchRequirement}
+          onChange={(e) => setBatchRequirement(e.target.value)}
+          className={cn(
+            "min-h-[80px] resize-none",
+            isMobileLayout && "min-h-[100px] text-base",
+          )}
+        />
+      </div>
 
-      <Button
+      <div
+        className={cn("flex gap-2 flex-wrap", isMobileLayout && "flex-col gap-3")}
+      >
+        <GlobalTraitsEditor
+          className={cn(
+            "flex-1 items-center justify-center font-medium",
+            isMobileLayout && "py-6 text-base",
+          )}
+        />
+
+        <Button
         ref={clearAllBtnRef}
         variant="destructive"
         className={cn(
@@ -117,6 +137,7 @@ export default function ActionsArea({
           </>
         )}
       </Button>
+      </div>
     </div>
   );
 }
