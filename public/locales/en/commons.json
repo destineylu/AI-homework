@@ -7,6 +7,8 @@
     "chat": "Chat",
     "settings": "Settings",
     "title": "Add Images",
+    "batch-requirement-label": "Batch Requirements (Optional)",
+    "batch-requirement-placeholder": "Enter temporary requirements for this batch, e.g., answer all questions in Chinese, provide detailed explanations, etc. These requirements only apply to the current upload.",
     "global-traits": {
       "trigger": "Global Traits Editor",
       "title": "Edit Global Traits",

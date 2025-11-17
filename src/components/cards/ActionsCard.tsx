@@ -1,5 +1,5 @@
 import type { FileItem } from "@/store/problems-store";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import ActionsArea from "../areas/ActionsArea";
 import InfoArea from "../UploadsInfo";
 import { Button } from "../ui/button";
@@ -11,8 +11,6 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useShortcut } from "@/hooks/use-shortcut";
 import { ShortcutHint } from "../ShortcutHint";
-import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
 
 export type ActionsCardProps = {
   items: FileItem[];

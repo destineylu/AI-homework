@@ -2,6 +2,8 @@
 interface Resources {
   "commons": {
     "actions": {
+      "batch-requirement-label": "Batch Requirements (Optional)",
+      "batch-requirement-placeholder": "Enter temporary requirements for this batch...",
       "chat": "Chat",
       "clear-all": "Clear All",
       "clear-confirmation": "Click again to clear",

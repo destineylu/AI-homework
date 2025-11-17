@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 
 interface ScanOptionsDialogProps {
@@ -35,7 +34,6 @@ export default function ScanOptionsDialog({
   onConfirm,
   itemsCount,
 }: ScanOptionsDialogProps) {
-  const { t } = useTranslation("commons");
   const [requirements, setRequirements] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 
