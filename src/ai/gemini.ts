@@ -159,11 +159,41 @@ export class GeminiAi {
   }
 
   async getAvailableModels(): Promise<GeminiModel[]> {
-    const models = await this.ai.models.list();
-    return models.page.map((it) => ({
-      name: it.name!,
-      displayName: it.displayName ?? it.name!,
-    }));
+    try {
+      const allModels: GeminiModel[] = [];
+      let pageToken: string | undefined = undefined;
+      
+      // 获取所有页面的模型
+      do {
+        const response: any = await this.ai.models.list({ pageToken });
+        
+        // 过滤出支持generateContent的模型
+        const validModels = response.page
+          .filter((model: any) => {
+            // 只包含支持生成内容的模型
+            const supportedMethods = model.supportedGenerationMethods || [];
+            return supportedMethods.includes("generateContent");
+          })
+          .map((model: any) => ({
+            name: model.name!,
+            displayName: model.displayName ?? model.name!,
+          }));
+        
+        allModels.push(...validModels);
+        pageToken = response.nextPageToken;
+      } while (pageToken);
+      
+      // 按名称排序，最新的模型（如gemini-3.0）会在前面
+      return allModels.sort((a, b) => {
+        // 提取版本号进行排序
+        const versionA = a.name.match(/(\d+\.\d+)/)?.[1] || "0";
+        const versionB = b.name.match(/(\d+\.\d+)/)?.[1] || "0";
+        return parseFloat(versionB) - parseFloat(versionA);
+      });
+    } catch (error) {
+      console.error("Failed to fetch Gemini models:", error);
+      throw error;
+    }
   }
 
   async sendChat(
