@@ -162,18 +162,20 @@ export class GeminiAi {
     try {
       const response: any = await this.ai.models.list();
       
-      // 获取所有模型并过滤出支持generateContent的模型
+      // 获取所有模型
       const allModels = response.page || [];
-      const validModels = allModels
-        .filter((model: any) => {
-          // 只包含支持生成内容的模型
-          const supportedMethods = model.supportedGenerationMethods || [];
-          return supportedMethods.includes("generateContent");
-        })
-        .map((model: any) => ({
+      console.log(`[Gemini] Fetched ${allModels.length} models from API`);
+      
+      // 先不过滤，显示所有模型
+      const validModels = allModels.map((model: any) => {
+        console.log(`[Gemini] Model: ${model.name}, display: ${model.displayName}, methods: ${(model.supportedGenerationMethods || []).join(", ")}`);
+        return {
           name: model.name!,
           displayName: model.displayName ?? model.name!,
-        }));
+        };
+      });
+      
+      console.log(`[Gemini] Total models returned: ${validModels.length}`);
       
       // 按名称排序，最新的模型（如gemini-3.0）会在前面
       return validModels.sort((a: GeminiModel, b: GeminiModel) => {
