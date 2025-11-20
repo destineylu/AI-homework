@@ -8,6 +8,7 @@ import { SOLVE_SYSTEM_PROMPT } from "@/ai/prompts";
 import { uint8ToBase64 } from "@/utils/encoding";
 import { parseSolveResponse } from "@/ai/response";
 import { AnswerValidator } from "@/utils/answer-validator";
+import { SolutionQualityChecker } from "@/utils/solution-quality-checker";
 
 import {
   useProblemsStore,
@@ -379,26 +380,51 @@ ${batchRequirement}
               throw new Error(t("errors.parsing-failed"));
             }
 
-            // ===== 验证答案质量 =====
+            // ===== 双层质量验证 =====
             const validatedProblems = res.problems.map((problem) => {
-              const validation = AnswerValidator.validateSolution(problem);
+              // 第一层：原有的答案验证器（基础验证）
+              const basicValidation = AnswerValidator.validateSolution(problem);
+              
+              // 第二层：新的质量检查器（深度验证）
+              const qualityValidation = SolutionQualityChecker.validate(problem);
+              
+              // 合并两层验证结果
+              const combinedConfidence = Math.min(
+                basicValidation.confidence,
+                qualityValidation.confidence
+              );
               
               // 如果置信度过低，在explanation中添加警告
-              if (validation.confidence < 0.7) {
-                const badge = AnswerValidator.getConfidenceBadge(validation.confidence);
-                let warningText = `⚠️ **答案质量警告** (置信度: ${(validation.confidence * 100).toFixed(0)}% - ${badge.label})\n\n`;
+              if (combinedConfidence < 0.7 || qualityValidation.issues.length > 0) {
+                const badge = AnswerValidator.getConfidenceBadge(combinedConfidence);
+                let warningText = `⚠️ **答案质量警告** (置信度: ${(combinedConfidence * 100).toFixed(0)}% - ${badge.label})\n\n`;
                 
-                if (validation.issues.length > 0) {
-                  warningText += `**发现的问题：**\n`;
-                  validation.issues.forEach(issue => {
+                // 显示基础验证问题
+                if (basicValidation.issues.length > 0) {
+                  warningText += `**内容问题：**\n`;
+                  basicValidation.issues.forEach(issue => {
                     warningText += `- ${issue}\n`;
                   });
                   warningText += "\n";
                 }
                 
-                if (validation.suggestions.length > 0) {
+                // 显示质量检查问题
+                if (qualityValidation.issues.length > 0) {
+                  warningText += `**质量问题：**\n`;
+                  qualityValidation.issues.forEach(issue => {
+                    warningText += `- [${issue.severity}] ${issue.message}\n`;
+                  });
+                  warningText += "\n";
+                }
+                
+                // 合并改进建议
+                const allSuggestions = [
+                  ...basicValidation.suggestions,
+                  ...qualityValidation.suggestions
+                ];
+                if (allSuggestions.length > 0) {
                   warningText += `**改进建议：**\n`;
-                  validation.suggestions.forEach(suggestion => {
+                  allSuggestions.forEach(suggestion => {
                     warningText += `- ${suggestion}\n`;
                   });
                   warningText += "\n";
