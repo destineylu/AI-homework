@@ -290,6 +290,100 @@ export const SOLVE_SYSTEM_PROMPT = String.raw`
   </problems>
 </solution>
 \`\`\`
+
+### 示例2：物理计算题
+
+**输入图片**: 一物体从静止开始做匀加速直线运动，加速度为2 m/s²，求5秒后的速度和位移。
+
+**输出**:
+\`\`\`xml
+<solution>
+  <problems>
+    <problem>
+      <problem_text><![CDATA[一物体从静止开始做匀加速直线运动，加速度为 $$ a = 2 \\text{ m/s}^2 $$，求 $$ t = 5 \\text{ s} $$ 后的速度和位移。]]></problem_text>
+      <answer><![CDATA[速度 $$ v = 10 \\text{ m/s} $$，位移 $$ s = 25 \\text{ m} $$]]></answer>
+      <explanation><![CDATA[
+**第一步：理解题意**
+这是匀变速直线运动问题，初速度为0，求末速度和位移。
+
+**第二步：分析条件**
+- 初速度：$$ v_0 = 0 \\text{ m/s} $$（从静止开始）
+- 加速度：$$ a = 2 \\text{ m/s}^2 $$
+- 时间：$$ t = 5 \\text{ s} $$
+- 求：末速度 $$ v $$ 和位移 $$ s $$
+
+**第三步：制定方案**
+使用匀变速直线运动公式：
+- 速度公式：$$ v = v_0 + at $$
+- 位移公式：$$ s = v_0 t + \\frac{1}{2}at^2 $$
+
+**第四步：分步求解**
+
+1. **求末速度**：
+   $$ v = v_0 + at = 0 + 2 \\times 5 = 10 \\text{ m/s} $$
+
+2. **求位移**：
+   $$ s = v_0 t + \\frac{1}{2}at^2 = 0 \\times 5 + \\frac{1}{2} \\times 2 \\times 5^2 $$
+   $$ s = 0 + 1 \\times 25 = 25 \\text{ m} $$
+
+**第五步：验证检查**
+- 单位检查：速度单位 m/s ✓，位移单位 m ✓
+- 合理性检查：5秒加速到10 m/s，平均速度5 m/s，位移25m = 5×5 ✓
+- 也可用 $$ v^2 - v_0^2 = 2as $$ 验证：$$ 10^2 - 0 = 2 \\times 2 \\times 25 $$，$$ 100 = 100 $$ ✓
+
+**结论**：5秒后速度为 $$ 10 \\text{ m/s} $$，位移为 $$ 25 \\text{ m} $$。]]></explanation>
+    </problem>
+  </problems>
+</solution>
+\`\`\`
+
+### 示例3：化学计算题
+
+**输入图片**: 计算32g氧气在标准状况下的体积是多少升？
+
+**输出**:
+\`\`\`xml
+<solution>
+  <problems>
+    <problem>
+      <problem_text><![CDATA[计算 $$ 32 \\text{ g} $$ 氧气（$$ \\text{O}_2 $$）在标准状况下的体积是多少升？]]></problem_text>
+      <answer><![CDATA[$$ 22.4 \\text{ L} $$]]></answer>
+      <explanation><![CDATA[
+**第一步：理解题意**
+这是气体体积计算问题，需要从质量求体积。
+
+**第二步：分析条件**
+- 氧气质量：$$ m = 32 \\text{ g} $$
+- 氧气分子式：$$ \\text{O}_2 $$
+- 标准状况：温度0°C，压强101 kPa
+- 求：体积 $$ V $$
+
+**第三步：制定方案**
+使用公式：
+1. 先求物质的量：$$ n = \\frac{m}{M} $$
+2. 再求体积：$$ V = n \\times V_m $$（标准状况下 $$ V_m = 22.4 \\text{ L/mol} $$）
+
+**第四步：分步求解**
+
+1. **计算氧气摩尔质量**：
+   $$ M(\\text{O}_2) = 16 \\times 2 = 32 \\text{ g/mol} $$
+
+2. **计算物质的量**：
+   $$ n = \\frac{m}{M} = \\frac{32 \\text{ g}}{32 \\text{ g/mol}} = 1 \\text{ mol} $$
+
+3. **计算体积**：
+   $$ V = n \\times V_m = 1 \\text{ mol} \\times 22.4 \\text{ L/mol} = 22.4 \\text{ L} $$
+
+**第五步：验证检查**
+- 单位检查：体积单位为 L ✓
+- 合理性：1 mol气体在标准状况下体积为22.4 L，符合规律 ✓
+- 氧气质量32g恰好是1 mol，结果合理 ✓
+
+**结论**：32g氧气在标准状况下的体积为 $$ 22.4 \\text{ L} $$。]]></explanation>
+    </problem>
+  </problems>
+</solution>
+\`\`\`
 `;
 
 export const BASE_CHAT_SYSTEM_PROMPT =

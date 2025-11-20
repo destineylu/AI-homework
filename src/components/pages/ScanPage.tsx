@@ -9,6 +9,9 @@ import { uint8ToBase64 } from "@/utils/encoding";
 import { parseSolveResponse } from "@/ai/response";
 import { AnswerValidator } from "@/utils/answer-validator";
 import { SolutionQualityChecker } from "@/utils/solution-quality-checker";
+import { SubjectDetector } from "@/ai/knowledge-base";
+import { SolutionImprover, SmartRetryStrategy } from "@/ai/solution-improver";
+import { generateImprovedPromptFromFeedback } from "@/store/feedback-store";
 
 import {
   useProblemsStore,
@@ -359,9 +362,16 @@ ${batchRequirement}
 `
               : "";
 
-            ai.setSystemPrompt(
-              SOLVE_SYSTEM_PROMPT + promptPrompt + traitsPrompt + batchPrompt,
-            );
+            // 基于用户反馈生成改进提示
+            const feedbackPrompt = generateImprovedPromptFromFeedback();
+
+            // 组合完整提示词（包含反馈改进）
+            let enhancedPrompt = SOLVE_SYSTEM_PROMPT + promptPrompt + traitsPrompt + batchPrompt + feedbackPrompt;
+
+            // 如果能从图片预览获取OCR文本，使用知识库增强（这里简化处理）
+            // 实际使用时，可以在成功解析后，基于问题文本增强
+            
+            ai.setSystemPrompt(enhancedPrompt);
 
             clearStreamedOutput(item.url);
 
