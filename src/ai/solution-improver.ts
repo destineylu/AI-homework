@@ -1,5 +1,5 @@
 import type { ProblemSolution } from "@/store/problems-store";
-import type { AiClient } from "./request";
+import type { AiClient } from "@/store/ai-store";
 import { SolutionQualityChecker } from "@/utils/solution-quality-checker";
 import { IMPROVE_SYSTEM_PROMPT } from "./prompts";
 import { parseImproveResponse } from "./response";
@@ -82,8 +82,13 @@ export class SolutionImprover {
 `;
 
       // 调用 IMPROVE API
+      if (!aiClient.sendChat) {
+        throw new Error("AI client does not support chat functionality");
+      }
       aiClient.setSystemPrompt(IMPROVE_SYSTEM_PROMPT);
-      const improvedText = await aiClient.sendMessage(improveRequestXml);
+      const improvedText = await aiClient.sendChat([
+        { role: "user", content: improveRequestXml }
+      ]);
 
       // 解析改进后的答案
       const improvedResult = parseImproveResponse(improvedText);
@@ -91,8 +96,8 @@ export class SolutionImprover {
       if (improvedResult) {
         const improvedSolution: ProblemSolution = {
           problem: solution.problem, // 保持原问题
-          answer: improvedResult.answer,
-          explanation: improvedResult.explanation,
+          answer: improvedResult.improved_answer,
+          explanation: improvedResult.improved_explanation,
         };
 
         // 递归验证改进后的答案
