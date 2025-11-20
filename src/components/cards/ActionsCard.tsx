@@ -99,11 +99,12 @@ export default function ActionsCard({
         >
           <Button
             className={cn(
-              "flex-1 font-medium shadow-sm hover:shadow-md transition-all",
+              "flex-1 font-semibold shadow-lg hover:shadow-xl transition-all duration-200",
+              "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800",
+              "text-white border-0",
               layout === "mobile" && "py-6 text-base"
             )}
             size={layout === "mobile" ? "lg" : "default"}
-            variant="secondary"
             onClick={handleSettingsBtnClick}
           >
             {t("settings")}{" "}
