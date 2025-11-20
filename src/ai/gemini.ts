@@ -166,7 +166,7 @@ export class GeminiAi {
       const allModels = response.page || [];
       console.log(`[Gemini] Fetched ${allModels.length} models from API`);
       
-      // 先不过滤，显示所有模型
+      // 处理所有模型
       const validModels = allModels.map((model: any) => {
         console.log(`[Gemini] Model: ${model.name}, display: ${model.displayName}, methods: ${(model.supportedGenerationMethods || []).join(", ")}`);
         return {
@@ -177,12 +177,30 @@ export class GeminiAi {
       
       console.log(`[Gemini] Total models returned: ${validModels.length}`);
       
-      // 按名称排序，最新的模型（如gemini-3.0）会在前面
+      // 改进排序逻辑：按版本号和名称排序
       return validModels.sort((a: GeminiModel, b: GeminiModel) => {
-        // 提取版本号进行排序
-        const versionA = a.name.match(/(\d+\.\d+)/)?.[1] || "0";
-        const versionB = b.name.match(/(\d+\.\d+)/)?.[1] || "0";
-        return parseFloat(versionB) - parseFloat(versionA);
+        // 提取版本号 (支持 3, 3.0, 2.5, 2.0, 1.5 等格式)
+        const extractVersion = (name: string): number => {
+          // 匹配 gemini-X.X 或 gemini-X
+          const match = name.toLowerCase().match(/gemini[- ](\d+)(?:\.(\d+))?/);
+          if (match) {
+            const major = parseInt(match[1] || "0");
+            const minor = parseInt(match[2] || "0");
+            return major * 100 + minor; // 3.0 -> 300, 2.5 -> 205, 3 -> 300
+          }
+          return 0;
+        };
+        
+        const versionA = extractVersion(a.name);
+        const versionB = extractVersion(b.name);
+        
+        // 版本号降序
+        if (versionA !== versionB) {
+          return versionB - versionA;
+        }
+        
+        // 版本号相同时，按名称字母序
+        return a.displayName.localeCompare(b.displayName);
       });
     } catch (error) {
       console.error("Failed to fetch Gemini models:", error);
