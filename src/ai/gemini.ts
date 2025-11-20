@@ -160,31 +160,23 @@ export class GeminiAi {
 
   async getAvailableModels(): Promise<GeminiModel[]> {
     try {
-      const allModels: GeminiModel[] = [];
-      let pageToken: string | undefined = undefined;
+      const response: any = await this.ai.models.list();
       
-      // 获取所有页面的模型
-      do {
-        const response: any = await this.ai.models.list({ pageToken });
-        
-        // 过滤出支持generateContent的模型
-        const validModels = response.page
-          .filter((model: any) => {
-            // 只包含支持生成内容的模型
-            const supportedMethods = model.supportedGenerationMethods || [];
-            return supportedMethods.includes("generateContent");
-          })
-          .map((model: any) => ({
-            name: model.name!,
-            displayName: model.displayName ?? model.name!,
-          }));
-        
-        allModels.push(...validModels);
-        pageToken = response.nextPageToken;
-      } while (pageToken);
+      // 获取所有模型并过滤出支持generateContent的模型
+      const allModels = response.page || [];
+      const validModels = allModels
+        .filter((model: any) => {
+          // 只包含支持生成内容的模型
+          const supportedMethods = model.supportedGenerationMethods || [];
+          return supportedMethods.includes("generateContent");
+        })
+        .map((model: any) => ({
+          name: model.name!,
+          displayName: model.displayName ?? model.name!,
+        }));
       
       // 按名称排序，最新的模型（如gemini-3.0）会在前面
-      return allModels.sort((a, b) => {
+      return validModels.sort((a: GeminiModel, b: GeminiModel) => {
         // 提取版本号进行排序
         const versionA = a.name.match(/(\d+\.\d+)/)?.[1] || "0";
         const versionB = b.name.match(/(\d+\.\d+)/)?.[1] || "0";
