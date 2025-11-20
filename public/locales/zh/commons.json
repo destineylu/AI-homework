@@ -327,13 +327,17 @@
         "unknown": "未知模型（{{name}}）"
       },
       "refresh": "刷新模型列表",
+      "refreshing": "正在刷新...",
       "manual": {
         "title": "自定义模型",
         "placeholder": "模型标识符",
         "desc": "如果列表中没有想要的模型，可手动填写名称。"
       },
       "fetch": {
-        "error": "获取 {{provider}} 的模型列表失败，请检查 API 密钥或基地址。"
+        "error": "获取 {{provider}} 的模型列表失败，请检查 API 密钥或基地址。",
+        "success": "成功获取 {{count}} 个模型",
+        "noKey": "请先填写 API 密钥",
+        "unsupported": "{{provider}} 暂不支持自动获取模型列表"
       }
     },
     "thinking": {

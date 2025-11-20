@@ -261,7 +261,10 @@ interface Resources {
       "model": {
         "desc": "Choose or type the model name used for requests.",
         "fetch": {
-          "error": "Failed to fetch models for {{provider}}. Check your API key or base URL."
+          "error": "Failed to fetch models for {{provider}}. Check your API key or base URL.",
+          "success": "Successfully fetched {{count}} models",
+          "noKey": "Please enter API key first",
+          "unsupported": "{{provider}} does not support automatic model fetching"
         },
         "manual": {
           "desc": "Enter a model name manually if it is not listed.",
@@ -269,6 +272,7 @@ interface Resources {
           "title": "Custom model"
         },
         "refresh": "Refresh models",
+        "refreshing": "Refreshing...",
         "sel": {
           "empty": "No models found.",
           "none": "No model selected",

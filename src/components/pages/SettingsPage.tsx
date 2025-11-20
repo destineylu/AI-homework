@@ -107,6 +107,7 @@ export default function SettingsPage() {
     activeSource?.maxPollMs?.toString() ?? "30000",
   );
   const [availableModels, setAvailableModels] = useState<AiModelSummary[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelPopoverOpen, setModelPopoverOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newProvider, setNewProvider] = useState<AiProvider>("gemini");
@@ -184,16 +185,25 @@ export default function SettingsPage() {
   const loadModels = useCallback(async () => {
     if (!activeSource?.id || !activeSource.apiKey) {
       setAvailableModels([]);
+      toast.error(t("model.fetch.noKey"));
       return;
     }
+    
+    setIsLoadingModels(true);
     try {
       const client = getClientForSource(activeSource.id);
       if (!client?.getAvailableModels) {
         setAvailableModels([]);
+        toast.warning(t("model.fetch.unsupported", {
+          provider: activeSource.name,
+        }));
         return;
       }
       const models = await client.getAvailableModels();
       setAvailableModels(models);
+      toast.success(t("model.fetch.success", {
+        count: models.length,
+      }));
     } catch (error) {
       console.error("Failed to fetch models", error);
       setAvailableModels([]);
@@ -202,6 +212,8 @@ export default function SettingsPage() {
           provider: activeSource.name,
         }),
       );
+    } finally {
+      setIsLoadingModels(false);
     }
   }, [activeSource, getClientForSource, t]);
 
@@ -725,8 +737,13 @@ export default function SettingsPage() {
                 </Command>
               </PopoverContent>
             </Popover>
-            <Button variant="outline" onClick={loadModels} className="flex-1">
-              {t("model.refresh")}
+            <Button 
+              variant="outline" 
+              onClick={loadModels} 
+              disabled={isLoadingModels || !activeSource?.apiKey}
+              className="flex-1"
+            >
+              {isLoadingModels ? t("model.refreshing") : t("model.refresh")}
             </Button>
           </div>
           <div className="space-y-2">

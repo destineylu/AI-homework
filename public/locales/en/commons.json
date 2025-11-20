@@ -327,13 +327,17 @@
         "unknown": "Unknown model ({{name}})"
       },
       "refresh": "Refresh models",
+      "refreshing": "Refreshing...",
       "manual": {
         "title": "Custom model",
         "placeholder": "Model identifier",
         "desc": "Enter a model name manually if it is not listed."
       },
       "fetch": {
-        "error": "Failed to fetch models for {{provider}}. Check your API key or base URL."
+        "error": "Failed to fetch models for {{provider}}. Check your API key or base URL.",
+        "success": "Successfully fetched {{count}} models",
+        "noKey": "Please enter API key first",
+        "unsupported": "{{provider}} does not support automatic model fetching"
       }
     },
     "thinking": {
