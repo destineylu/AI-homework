@@ -36,8 +36,9 @@ import { useTranslation } from "react-i18next";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useDrag } from "@use-gesture/react";
 import { animated, to, useSpring } from "@react-spring/web";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { exportSolutionAsPDF, exportAllSolutionsAsPDF } from "@/utils/pdf-exporter";
 
 export interface OrderedSolution {
   item: FileItem;
@@ -201,6 +202,68 @@ export default function SolutionsArea() {
     }
   }, [buildMarkdownDocument, exportableSolutions.length, translate]);
 
+  // PDF 导出功能
+  const handleExportCurrentPDF = useCallback(async () => {
+    if (!currentBundle || !currentBundle.solutions.problems.length) {
+      toast.error(translate("export.empty.title"), {
+        description: translate("export.empty.description"),
+      });
+      return;
+    }
+
+    try {
+      await exportSolutionAsPDF(
+        currentBundle.item.url,
+        currentBundle.solutions.problems,
+        {
+          filename: `solution-${currentBundle.item.file.name || Date.now()}.pdf`,
+          includeImages: true,
+          quality: 0.8,
+        }
+      );
+
+      toast.success("导出成功", {
+        description: "当前解决方案已导出为 PDF",
+      });
+    } catch (error) {
+      console.error("Failed to export current solution as PDF", error);
+      toast.error("导出失败", {
+        description: "导出 PDF 时出现错误，请重试",
+      });
+    }
+  }, [currentBundle, translate]);
+
+  const handleExportAllPDF = useCallback(async () => {
+    if (!exportableSolutions.length) {
+      toast.error(translate("export.empty.title"), {
+        description: translate("export.empty.description"),
+      });
+      return;
+    }
+
+    try {
+      const allSolutions = exportableSolutions.map(entry => ({
+        imageUrl: entry.item.url,
+        problems: entry.solutions.problems,
+      }));
+
+      await exportAllSolutionsAsPDF(allSolutions, {
+        filename: `all-solutions-${Date.now()}.pdf`,
+        includeImages: true,
+        quality: 0.8,
+      });
+
+      toast.success("导出成功", {
+        description: `已导出 ${exportableSolutions.length} 个解决方案为 PDF`,
+      });
+    } catch (error) {
+      console.error("Failed to export all solutions as PDF", error);
+      toast.error("导出失败", {
+        description: "导出 PDF 时出现错误，请重试",
+      });
+    }
+  }, [exportableSolutions, translate]);
+
   const [{ x }, api] = useSpring(() => ({ x: 0 }));
 
   // Effect to keep the selectedImage state consistent if the data changes.
@@ -361,14 +424,36 @@ export default function SolutionsArea() {
         <CardHeader className="px-6 pb-0">
           <CardTitle className="text-lg font-semibold">{t("title")}</CardTitle>
           <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportMarkdown}
-              disabled={!exportableSolutions.length}
-            >
-              {translate("export.button")}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportMarkdown}
+                disabled={!exportableSolutions.length}
+              >
+                {translate("export.button")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCurrentPDF}
+                disabled={!currentBundle || !currentBundle.solutions.problems.length}
+                title="导出当前页为 PDF"
+              >
+                <FileDown className="h-4 w-4 mr-1" />
+                当前PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAllPDF}
+                disabled={!exportableSolutions.length}
+                title="导出所有解决方案为 PDF"
+              >
+                <FileDown className="h-4 w-4 mr-1" />
+                全部PDF
+              </Button>
+            </div>
           </CardAction>
         </CardHeader>
         <CardContent className="pt-2">
