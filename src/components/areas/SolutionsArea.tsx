@@ -39,15 +39,85 @@ import { animated, to, useSpring } from "@react-spring/web";
 import { ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { exportSolutionAsPDF, exportAllSolutionsAsPDF } from "@/utils/pdf-exporter";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export interface OrderedSolution {
   item: FileItem;
   solutions: Solution;
 }
 
+// 将 LaTeX 公式转换为纯文本（用于不支持 LaTeX 的编辑器）
+function convertLatexToPlainText(text: string): string {
+  return text
+    // 行内公式 $...$
+    .replace(/\$([^$]+)\$/g, (_, formula) => {
+      return formula
+        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+        .replace(/\^\{([^}]+)\}/g, '^($1)')
+        .replace(/\^(\w)/g, '^$1')
+        .replace(/\_\{([^}]+)\}/g, '_($1)')
+        .replace(/\_(\w)/g, '_$1')
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\pm/g, '±')
+        .replace(/\\leq/g, '≤')
+        .replace(/\\geq/g, '≥')
+        .replace(/\\neq/g, '≠')
+        .replace(/\\approx/g, '≈')
+        .replace(/\\infty/g, '∞')
+        .replace(/\\sum/g, 'Σ')
+        .replace(/\\prod/g, 'Π')
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g, 'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\delta/g, 'δ')
+        .replace(/\\pi/g, 'π')
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+        .replace(/\\[a-zA-Z]+/g, '')
+        .trim();
+    })
+    // 行间公式 $$...$$
+    .replace(/\$\$([^$]+)\$\$/g, (_, formula) => {
+      const converted = formula
+        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
+        .replace(/\^\{([^}]+)\}/g, '^($1)')
+        .replace(/\^(\w)/g, '^$1')
+        .replace(/\_\{([^}]+)\}/g, '_($1)')
+        .replace(/\_(\w)/g, '_$1')
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\pm/g, '±')
+        .replace(/\\leq/g, '≤')
+        .replace(/\\geq/g, '≥')
+        .replace(/\\neq/g, '≠')
+        .replace(/\\approx/g, '≈')
+        .replace(/\\infty/g, '∞')
+        .replace(/\\sum/g, 'Σ')
+        .replace(/\\prod/g, 'Π')
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g, 'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\delta/g, 'δ')
+        .replace(/\\pi/g, 'π')
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+        .replace(/\\[a-zA-Z]+/g, '')
+        .trim();
+      return `\n\n    ${converted}\n\n`;
+    });
+}
+
 export default function SolutionsArea() {
   const { t } = useTranslation("commons", { keyPrefix: "solutions" });
   const { t: tCommon } = useTranslation("commons");
+  const [exportFormat, setExportFormat] = useState<'latex' | 'plain'>('plain');
   const translate = useCallback(
     (key: string, options?: Record<string, unknown>) =>
       t(key as never, options as never) as unknown as string,
@@ -105,6 +175,11 @@ export default function SolutionsArea() {
     const lines: string[] = [];
     lines.push(`# ${translate("export.document-title")}`);
     lines.push("");
+    
+    if (exportFormat === 'plain') {
+      lines.push("> 注：本文档为纯文本格式，数学公式已转换为 Unicode 符号，可在任何文本编辑器中查看。");
+      lines.push("");
+    }
 
     exportableSolutions.forEach((entry, pageIndex) => {
       const displayName = entry.item.file.name
@@ -132,41 +207,45 @@ export default function SolutionsArea() {
           value: string | undefined | null,
           fallback: string,
         ) => (hasContent(value) ? value! : fallback);
+        
+        const processContent = (content: string) => {
+          return exportFormat === 'plain' ? convertLatexToPlainText(content) : content;
+        };
 
         lines.push(`**${translate("export.problem-label")}**`);
         lines.push("");
         lines.push(
-          ensureContent(
+          processContent(ensureContent(
             problem.problem,
             translate("export.placeholders.problem"),
-          ),
+          )),
         );
         lines.push("");
 
         lines.push(`**${translate("export.answer-label")}**`);
         lines.push("");
         lines.push(
-          ensureContent(
+          processContent(ensureContent(
             problem.answer,
             translate("export.placeholders.answer"),
-          ),
+          )),
         );
         lines.push("");
 
         lines.push(`**${translate("export.explanation-label")}**`);
         lines.push("");
         lines.push(
-          ensureContent(
+          processContent(ensureContent(
             problem.explanation,
             translate("export.placeholders.explanation"),
-          ),
+          )),
         );
         lines.push("");
       });
     });
 
     return lines.join("\n");
-  }, [exportableSolutions, t, translate]);
+  }, [exportableSolutions, t, translate, exportFormat]);
 
   const handleExportMarkdown = useCallback(() => {
     if (!exportableSolutions.length) {
@@ -425,14 +504,41 @@ export default function SolutionsArea() {
           <CardTitle className="text-lg font-semibold">{t("title")}</CardTitle>
           <CardAction>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportMarkdown}
-                disabled={!exportableSolutions.length}
-              >
-                {translate("export.button")}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!exportableSolutions.length}
+                  >
+                    {translate("export.button")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setExportFormat('plain');
+                      setTimeout(handleExportMarkdown, 0);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">纯文本格式</span>
+                      <span className="text-xs text-muted-foreground">公式转换为 Unicode 符号（推荐）</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setExportFormat('latex');
+                      setTimeout(handleExportMarkdown, 0);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">LaTeX 格式</span>
+                      <span className="text-xs text-muted-foreground">需要专业 Markdown 编辑器</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 size="sm"

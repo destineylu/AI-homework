@@ -9,10 +9,28 @@ export interface ExportOptions {
 }
 
 /**
+ * 创建一个临时的 DOM 元素用于渲染内容
+ */
+function createTemporaryElement(content: string): HTMLElement {
+  const container = document.createElement("div");
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "800px";
+  container.style.padding = "40px";
+  container.style.backgroundColor = "#ffffff";
+  container.style.fontFamily = "Arial, sans-serif, 'Microsoft YaHei', '微软雅黑', SimSun, '宋体'";
+  container.style.fontSize = "14px";
+  container.style.lineHeight = "1.6";
+  container.style.color = "#000000";
+  container.innerHTML = content;
+  document.body.appendChild(container);
+  return container;
+}
+
+/**
  * 导出单个解决方案为 PDF
- * @param imageUrl 图片URL
- * @param problems 问题解答列表
- * @param options 导出选项
+ * 使用 html2canvas 捕获渲染内容以支持中文和复杂样式
  */
 export async function exportSolutionAsPDF(
   imageUrl: string,
@@ -26,6 +44,83 @@ export async function exportSolutionAsPDF(
   } = options;
 
   try {
+    // 构建 HTML 内容
+    let htmlContent = `
+      <div style="font-family: Arial, sans-serif, 'Microsoft YaHei', '微软雅黑', SimSun, '宋体'; color: #000;">
+        <h1 style="font-size: 24px; margin-bottom: 20px; color: #1a1a1a;">AI 作业解题结果</h1>
+    `;
+
+    // 添加图片
+    if (includeImages) {
+      htmlContent += `
+        <div style="margin: 20px 0;">
+          <img src="${imageUrl}" style="max-width: 100%; height: auto; border: 1px solid #ddd;" crossorigin="anonymous" />
+        </div>
+      `;
+    }
+
+    // 添加每个问题
+    problems.forEach((problem, index) => {
+      htmlContent += `
+        <div style="margin: 30px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;">
+          <h2 style="font-size: 18px; margin-bottom: 15px; color: #2c3e50;">题目 ${index + 1}</h2>
+          
+          <div style="margin-bottom: 15px;">
+            <strong style="color: #34495e;">问题：</strong>
+            <p style="margin: 5px 0; white-space: pre-wrap;">${problem.problem}</p>
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <strong style="color: #27ae60;">答案：</strong>
+            <p style="margin: 5px 0; white-space: pre-wrap;">${problem.answer}</p>
+          </div>
+          
+          <div>
+            <strong style="color: #2980b9;">解析：</strong>
+            <p style="margin: 5px 0; white-space: pre-wrap;">${problem.explanation}</p>
+          </div>
+        </div>
+      `;
+    });
+
+    htmlContent += `</div>`;
+
+    // 创建临时元素
+    const container = createTemporaryElement(htmlContent);
+
+    // 等待图片加载
+    const images = container.getElementsByTagName("img");
+    if (images.length > 0) {
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                resolve(null);
+              } else {
+                img.onload = () => resolve(null);
+                img.onerror = () => resolve(null);
+                setTimeout(() => resolve(null), 3000);
+              }
+            })
+        )
+      );
+    }
+
+    // 使用 html2canvas 捕获内容
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
+
+    // 移除临时元素
+    document.body.removeChild(container);
+
+    // 创建 PDF
+    const imgData = canvas.toDataURL("image/jpeg", quality);
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -34,112 +129,24 @@ export async function exportSolutionAsPDF(
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
-    const contentWidth = pageWidth - 2 * margin;
-    let yPosition = margin;
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * pageWidth) / canvas.width;
 
-    // 添加标题
-    pdf.setFontSize(16);
-    pdf.text("AI 作业解题结果", margin, yPosition);
-    yPosition += 10;
+    let heightLeft = imgHeight;
+    let position = 0;
 
-    // 添加图片（如果启用）
-    if (includeImages) {
-      try {
-        // 尝试加载图片并添加到 PDF
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = imageUrl;
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          setTimeout(reject, 5000); // 5秒超时
-        });
+    // 添加第一页
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d")!;
-        
-        // 计算缩放比例以适应页面宽度
-        const maxWidth = contentWidth * 3.78; // mm to px (approximately)
-        const scale = Math.min(1, maxWidth / img.width);
-        
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        const imgData = canvas.toDataURL("image/jpeg", quality);
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        
-        // 检查是否需要新页面
-        if (yPosition + imgHeight > pageHeight - margin) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        
-        pdf.addImage(imgData, "JPEG", margin, yPosition, contentWidth, imgHeight);
-        yPosition += imgHeight + 10;
-      } catch (error) {
-        console.warn("Failed to add image to PDF:", error);
-        // 继续处理，即使图片加载失败
-      }
+    // 如果内容超过一页，继续添加
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
     }
 
-    // 添加每个问题的解答
-    pdf.setFontSize(12);
-    
-    for (let i = 0; i < problems.length; i++) {
-      const problem = problems[i];
-      
-      // 检查是否需要新页面
-      if (yPosition > pageHeight - margin - 40) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      
-      // 问题标题
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`题目 ${i + 1}:`, margin, yPosition);
-      yPosition += 7;
-      
-      // 问题内容
-      pdf.setFont("helvetica", "normal");
-      const problemLines = pdf.splitTextToSize(problem.problem, contentWidth);
-      pdf.text(problemLines, margin, yPosition);
-      yPosition += problemLines.length * 5 + 5;
-      
-      // 答案
-      pdf.setFont("helvetica", "bold");
-      pdf.text("答案:", margin, yPosition);
-      yPosition += 7;
-      
-      pdf.setFont("helvetica", "normal");
-      const answerLines = pdf.splitTextToSize(problem.answer, contentWidth);
-      pdf.text(answerLines, margin, yPosition);
-      yPosition += answerLines.length * 5 + 5;
-      
-      // 解析
-      pdf.setFont("helvetica", "bold");
-      pdf.text("解析:", margin, yPosition);
-      yPosition += 7;
-      
-      pdf.setFont("helvetica", "normal");
-      const explanationLines = pdf.splitTextToSize(
-        problem.explanation,
-        contentWidth
-      );
-      pdf.text(explanationLines, margin, yPosition);
-      yPosition += explanationLines.length * 5 + 10;
-      
-      // 添加分隔线
-      if (i < problems.length - 1) {
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-        yPosition += 10;
-      }
-    }
-
-    // 保存 PDF
     pdf.save(filename);
   } catch (error) {
     console.error("Failed to export PDF:", error);
@@ -149,8 +156,7 @@ export async function exportSolutionAsPDF(
 
 /**
  * 导出所有解决方案为单个 PDF
- * @param solutions 所有解决方案
- * @param options 导出选项
+ * 使用 html2canvas 以支持中文
  */
 export async function exportAllSolutionsAsPDF(
   solutions: Array<{ imageUrl: string; problems: ProblemSolution[] }>,
@@ -163,6 +169,92 @@ export async function exportAllSolutionsAsPDF(
   } = options;
 
   try {
+    // 构建所有解决方案的 HTML
+    let htmlContent = `
+      <div style="font-family: Arial, sans-serif, 'Microsoft YaHei', '微软雅黑', SimSun, '宋体'; color: #000;">
+        <h1 style="font-size: 24px; margin-bottom: 20px; color: #1a1a1a;">AI 作业解题结果汇总</h1>
+    `;
+
+    solutions.forEach((solution, solutionIndex) => {
+      htmlContent += `
+        <div style="page-break-before: ${solutionIndex > 0 ? 'always' : 'auto'}; margin-bottom: 40px;">
+          <h2 style="font-size: 20px; margin: 20px 0; color: #2c3e50;">解决方案 ${solutionIndex + 1}</h2>
+      `;
+
+      // 添加图片
+      if (includeImages) {
+        htmlContent += `
+          <div style="margin: 20px 0;">
+            <img src="${solution.imageUrl}" style="max-width: 100%; height: auto; border: 1px solid #ddd;" crossorigin="anonymous" />
+          </div>
+        `;
+      }
+
+      // 添加问题
+      solution.problems.forEach((problem, index) => {
+        htmlContent += `
+          <div style="margin: 30px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa;">
+            <h3 style="font-size: 18px; margin-bottom: 15px; color: #2c3e50;">题目 ${index + 1}</h3>
+            
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #34495e;">问题：</strong>
+              <p style="margin: 5px 0; white-space: pre-wrap;">${problem.problem}</p>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <strong style="color: #27ae60;">答案：</strong>
+              <p style="margin: 5px 0; white-space: pre-wrap;">${problem.answer}</p>
+            </div>
+            
+            <div>
+              <strong style="color: #2980b9;">解析：</strong>
+              <p style="margin: 5px 0; white-space: pre-wrap;">${problem.explanation}</p>
+            </div>
+          </div>
+        `;
+      });
+
+      htmlContent += `</div>`;
+    });
+
+    htmlContent += `</div>`;
+
+    // 创建临时元素
+    const container = createTemporaryElement(htmlContent);
+
+    // 等待所有图片加载
+    const images = container.getElementsByTagName("img");
+    if (images.length > 0) {
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                resolve(null);
+              } else {
+                img.onload = () => resolve(null);
+                img.onerror = () => resolve(null);
+                setTimeout(() => resolve(null), 5000);
+              }
+            })
+        )
+      );
+    }
+
+    // 使用 html2canvas 捕获内容
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
+
+    // 移除临时元素
+    document.body.removeChild(container);
+
+    // 创建 PDF
+    const imgData = canvas.toDataURL("image/jpeg", quality);
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -171,112 +263,22 @@ export async function exportAllSolutionsAsPDF(
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 15;
-    const contentWidth = pageWidth - 2 * margin;
-    let yPosition = margin;
-    let isFirstPage = true;
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * pageWidth) / canvas.width;
 
-    for (let solutionIndex = 0; solutionIndex < solutions.length; solutionIndex++) {
-      const solution = solutions[solutionIndex];
-      
-      // 如果不是第一个解决方案，添加新页面
-      if (!isFirstPage) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-      isFirstPage = false;
+    let heightLeft = imgHeight;
+    let position = 0;
 
-      // 添加解决方案标题
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`解决方案 ${solutionIndex + 1}`, margin, yPosition);
-      yPosition += 10;
+    // 添加第一页
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
 
-      // 添加图片
-      if (includeImages) {
-        try {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.src = solution.imageUrl;
-          
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            setTimeout(reject, 5000);
-          });
-
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d")!;
-          
-          const maxWidth = contentWidth * 3.78;
-          const scale = Math.min(1, maxWidth / img.width);
-          
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          const imgData = canvas.toDataURL("image/jpeg", quality);
-          const imgHeight = (canvas.height * contentWidth) / canvas.width;
-          
-          if (yPosition + imgHeight > pageHeight - margin) {
-            pdf.addPage();
-            yPosition = margin;
-          }
-          
-          pdf.addImage(imgData, "JPEG", margin, yPosition, contentWidth, imgHeight);
-          yPosition += imgHeight + 10;
-        } catch (error) {
-          console.warn("Failed to add image:", error);
-        }
-      }
-
-      // 添加问题
-      pdf.setFontSize(12);
-      
-      for (let i = 0; i < solution.problems.length; i++) {
-        const problem = solution.problems[i];
-        
-        if (yPosition > pageHeight - margin - 40) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        
-        pdf.setFont("helvetica", "bold");
-        pdf.text(`题目 ${i + 1}:`, margin, yPosition);
-        yPosition += 7;
-        
-        pdf.setFont("helvetica", "normal");
-        const problemLines = pdf.splitTextToSize(problem.problem, contentWidth);
-        pdf.text(problemLines, margin, yPosition);
-        yPosition += problemLines.length * 5 + 5;
-        
-        pdf.setFont("helvetica", "bold");
-        pdf.text("答案:", margin, yPosition);
-        yPosition += 7;
-        
-        pdf.setFont("helvetica", "normal");
-        const answerLines = pdf.splitTextToSize(problem.answer, contentWidth);
-        pdf.text(answerLines, margin, yPosition);
-        yPosition += answerLines.length * 5 + 5;
-        
-        pdf.setFont("helvetica", "bold");
-        pdf.text("解析:", margin, yPosition);
-        yPosition += 7;
-        
-        pdf.setFont("helvetica", "normal");
-        const explanationLines = pdf.splitTextToSize(
-          problem.explanation,
-          contentWidth
-        );
-        pdf.text(explanationLines, margin, yPosition);
-        yPosition += explanationLines.length * 5 + 10;
-        
-        if (i < solution.problems.length - 1) {
-          pdf.setDrawColor(200, 200, 200);
-          pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-          yPosition += 10;
-        }
-      }
+    // 如果内容超过一页，继续添加
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
     }
 
     pdf.save(filename);
