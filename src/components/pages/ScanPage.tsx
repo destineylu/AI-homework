@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { Info, StarIcon } from "lucide-react";
+import { Info, StarIcon, History, Trash2, FileImage } from "lucide-react";
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useAiStore } from "@/store/ai-store";
 import ActionsCard from "../cards/ActionsCard";
@@ -10,6 +10,8 @@ import { parseSolveResponse } from "@/ai/response";
 import { AnswerValidator } from "@/utils/answer-validator";
 import { SolutionQualityChecker } from "@/utils/solution-quality-checker";
 import { generateImprovedPromptFromFeedback } from "@/store/feedback-store";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ScrollArea } from "../ui/scroll-area";
 
 import {
   useProblemsStore,
@@ -76,6 +78,8 @@ export default function ScanPage() {
   const [activeTab, setActiveTab] = useState<"capture" | "preview">(
     items.length ? "preview" : "capture",
   );
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyItems, setHistoryItems] = useState<Array<{id: string, timestamp: number, imageUrl: string, problems: ProblemSolution[]}>>([]);
 
   useShortcut(
     "openChat",
@@ -91,6 +95,22 @@ export default function ScanPage() {
       setActiveTab("capture");
     }
   }, [items.length]);
+
+  // 加载历史记录
+  useEffect(() => {
+    const loadHistory = () => {
+      try {
+        const saved = localStorage.getItem('homework-history');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setHistoryItems(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to load history:', error);
+      }
+    };
+    loadHistory();
+  }, []);
 
   // Effect hook to clean up object URLs when the component unmounts or items change.
   useEffect(() => {
@@ -186,6 +206,61 @@ export default function ScanPage() {
     clearAllItems();
     clearAllSolutions(); // Use the semantic action to clear solutions.
   };
+
+  // 保存到历史记录
+  const saveToHistory = useCallback(() => {
+    const imageSolutions = useProblemsStore.getState().imageSolutions;
+    const newHistoryItems = Array.from(imageSolutions.entries())
+      .filter(([_, solution]) => solution.status === 'success' && solution.problems.length > 0)
+      .map(([imageUrl, solution]) => ({
+        id: `history-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        timestamp: Date.now(),
+        imageUrl,
+        problems: solution.problems,
+      }));
+
+    if (newHistoryItems.length === 0) {
+      toast.error('没有可保存的解答记录');
+      return;
+    }
+
+    try {
+      const existing = localStorage.getItem('homework-history');
+      const existingItems = existing ? JSON.parse(existing) : [];
+      const updated = [...newHistoryItems, ...existingItems].slice(0, 50); // 保留最近 50 条
+      localStorage.setItem('homework-history', JSON.stringify(updated));
+      setHistoryItems(updated);
+      toast.success(`已保存 ${newHistoryItems.length} 条解答记录`);
+    } catch (error) {
+      console.error('Failed to save history:', error);
+      toast.error('保存历史记录失败');
+    }
+  }, []);
+
+  // 删除历史记录
+  const deleteHistoryItem = useCallback((id: string) => {
+    try {
+      const updated = historyItems.filter(item => item.id !== id);
+      localStorage.setItem('homework-history', JSON.stringify(updated));
+      setHistoryItems(updated);
+      toast.success('已删除');
+    } catch (error) {
+      console.error('Failed to delete history item:', error);
+      toast.error('删除失败');
+    }
+  }, [historyItems]);
+
+  // 清空历史记录
+  const clearHistory = useCallback(() => {
+    try {
+      localStorage.removeItem('homework-history');
+      setHistoryItems([]);
+      toast.success('已清空历史记录');
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+      toast.error('清空失败');
+    }
+  }, []);
 
   // Utility function to retry an async operation with exponential backoff and quality checks.
   const retryAsyncOperation = async (
@@ -537,26 +612,45 @@ ${batchRequirement}
               <span>{t("tip")}</span>
             </div>
           </div>
-          {showDonateBtn && (
+          <div className={cn("flex gap-2", isMobile && "w-full")}>
             <Button
-              className={cn(
-                "gap-2 whitespace-nowrap",
-                isMobile ? "w-full justify-center rounded-full py-3" : "px-4",
-              )}
+              variant="outline"
               size={isMobile ? "lg" : "default"}
-              variant="secondary"
-              asChild
+              className={cn(
+                "gap-2",
+                isMobile && "flex-1 rounded-full"
+              )}
+              onClick={() => setHistoryDialogOpen(true)}
             >
-              <a
-                href="https://996every.day/donate"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <StarIcon className="h-4 w-4" />
-                {t("donate-btn")}
-              </a>
+              <History className="h-4 w-4" />
+              {!isMobile && "历史记录"}
+              {historyItems.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                  {historyItems.length}
+                </span>
+              )}
             </Button>
-          )}
+            {showDonateBtn && (
+              <Button
+                className={cn(
+                  "gap-2 whitespace-nowrap",
+                  isMobile ? "flex-1 rounded-full py-3" : "px-4",
+                )}
+                size={isMobile ? "lg" : "default"}
+                variant="secondary"
+                asChild
+              >
+                <a
+                  href="https://996every.day/donate"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <StarIcon className="h-4 w-4" />
+                  {t("donate-btn")}
+                </a>
+              </Button>
+            )}
+          </div>
         </header>
 
         {isMobile && (
@@ -657,6 +751,88 @@ ${batchRequirement}
           </p>
         </footer>
       </div>
+
+      {/* 历史记录对话框 */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>历史记录</span>
+              {historyItems.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveToHistory}
+                  >
+                    保存当前
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearHistory}
+                  >
+                    清空全部
+                  </Button>
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            {historyItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileImage className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">暂无历史记录</p>
+                <p className="text-sm text-muted-foreground mt-2">解题完成后，点击"保存当前"按钮保存记录</p>
+              </div>
+            ) : (
+              <div className="space-y-4 pr-4">
+                {historyItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(item.timestamp).toLocaleString('zh-CN')}
+                          </span>
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                            {item.problems.length} 题
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {item.problems.map((problem, idx) => (
+                            <div key={idx} className="text-sm">
+                              <p className="font-medium text-foreground mb-1">
+                                题目 {idx + 1}: {problem.problem.slice(0, 100)}
+                                {problem.problem.length > 100 && '...'}
+                              </p>
+                              <p className="text-muted-foreground">
+                                答案: {problem.answer.slice(0, 80)}
+                                {problem.answer.length > 80 && '...'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteHistoryItem(item.id)}
+                        className="shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
