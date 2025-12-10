@@ -477,48 +477,29 @@ ${batchRequirement}
                 qualityValidation.confidence
               );
               
-              // 如果置信度过低，在explanation中添加警告
+              // 如果置信度过低，只在控制台记录警告，不显示给用户
               if (combinedConfidence < 0.7 || qualityValidation.issues.length > 0) {
                 const badge = AnswerValidator.getConfidenceBadge(combinedConfidence);
-                let warningText = `⚠️ **答案质量警告** (置信度: ${(combinedConfidence * 100).toFixed(0)}% - ${badge.label})\n\n`;
+                console.warn(`⚠️ 答案质量警告 (置信度: ${(combinedConfidence * 100).toFixed(0)}% - ${badge.label})`);
                 
-                // 显示基础验证问题
+                // 记录基础验证问题
                 if (basicValidation.issues.length > 0) {
-                  warningText += `**内容问题：**\n`;
-                  basicValidation.issues.forEach(issue => {
-                    warningText += `- ${issue}\n`;
-                  });
-                  warningText += "\n";
+                  console.warn('内容问题:', basicValidation.issues);
                 }
                 
-                // 显示质量检查问题
+                // 记录质量检查问题
                 if (qualityValidation.issues.length > 0) {
-                  warningText += `**质量问题：**\n`;
-                  qualityValidation.issues.forEach(issue => {
-                    warningText += `- [${issue.severity}] ${issue.message}\n`;
-                  });
-                  warningText += "\n";
+                  console.warn('质量问题:', qualityValidation.issues.map(i => `[${i.severity}] ${i.message}`));
                 }
                 
-                // 合并改进建议
+                // 记录改进建议
                 const allSuggestions = [
                   ...basicValidation.suggestions,
                   ...qualityValidation.suggestions
                 ];
                 if (allSuggestions.length > 0) {
-                  warningText += `**改进建议：**\n`;
-                  allSuggestions.forEach(suggestion => {
-                    warningText += `- ${suggestion}\n`;
-                  });
-                  warningText += "\n";
+                  console.warn('改进建议:', allSuggestions);
                 }
-                
-                warningText += "---\n\n";
-                
-                return {
-                  ...problem,
-                  explanation: warningText + problem.explanation,
-                };
               }
               
               return problem;
