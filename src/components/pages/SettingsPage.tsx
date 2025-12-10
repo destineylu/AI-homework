@@ -885,17 +885,6 @@ export default function SettingsPage() {
               {t("advanced.image-post-processing.binarizing")}
             </Label>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="show-donate-btn"
-              checked={showDonateBtn}
-              onCheckedChange={(state) => setShowDonateBtn(state as boolean)}
-            />
-            <Label htmlFor="show-donate-btn">
-              {t("advanced.ui.show-donate-btn")}
-            </Label>
-          </div>
         </CardContent>
       </Card>
 

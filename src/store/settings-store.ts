@@ -54,7 +54,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       imageBinarizing: false,
-      showDonateBtn: true,
+      showDonateBtn: false,
       theme: "system",
       language: DEFAULT_LANGUAGE,
       keybindings: { ...DEFAULT_SHORTCUTS },
