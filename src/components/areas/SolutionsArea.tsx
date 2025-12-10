@@ -306,8 +306,10 @@ export default function SolutionsArea() {
       });
     } catch (error) {
       console.error("Failed to export current solution as PDF", error);
+      const errorMessage = error instanceof Error ? error.message : "导出 PDF 时出现错误，请重试";
       toast.error("导出失败", {
-        description: "导出 PDF 时出现错误，请重试",
+        description: errorMessage,
+        duration: 5000,
       });
     }
   }, [currentBundle, translate]);
@@ -337,8 +339,10 @@ export default function SolutionsArea() {
       });
     } catch (error) {
       console.error("Failed to export all solutions as PDF", error);
+      const errorMessage = error instanceof Error ? error.message : "导出 PDF 时出现错误，请重试";
       toast.error("导出失败", {
-        description: "导出 PDF 时出现错误，请重试",
+        description: errorMessage,
+        duration: 5000,
       });
     }
   }, [exportableSolutions, translate]);
